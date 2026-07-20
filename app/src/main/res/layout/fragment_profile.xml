@@ -1,16 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F5F7FB"
-    android:fillViewport="true">
+    android:fillViewport="true"
+    android:overScrollMode="never">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingStart="20dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="20dp">
+
+        <!-- Page title -->
 
         <TextView
             android:layout_width="wrap_content"
@@ -28,6 +34,8 @@
             android:textColor="#6B7280"
             android:textSize="15sp" />
 
+        <!-- Profile information card -->
+
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -43,6 +51,8 @@
                 android:orientation="vertical"
                 android:padding="24dp">
 
+                <!-- Profile photo -->
+
                 <FrameLayout
                     android:layout_width="110dp"
                     android:layout_height="110dp">
@@ -53,8 +63,9 @@
                         android:layout_height="100dp"
                         android:layout_gravity="center"
                         android:background="@drawable/profile_image_background"
-                        android:contentDescription="Profile image"
-                        android:padding="22dp"
+                        android:clickable="true"
+                        android:contentDescription="Profile image. Tap to change photo"
+                        android:focusable="true"
                         android:scaleType="centerCrop"
                         android:src="@drawable/ic_person" />
 
@@ -71,12 +82,15 @@
 
                 </FrameLayout>
 
+                <!-- Values will be loaded from SQLite -->
+
                 <TextView
                     android:id="@+id/txtProfileName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:text="Aisha Nassor"
+                    android:gravity="center"
+                    android:text="Loading profile..."
                     android:textColor="#111827"
                     android:textSize="21sp"
                     android:textStyle="bold" />
@@ -86,7 +100,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="5dp"
-                    android:text="aisha@example.com"
+                    android:gravity="center"
+                    android:text="Loading email..."
                     android:textColor="#6B7280"
                     android:textSize="14sp" />
 
@@ -95,7 +110,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="+255 700 000 000"
+                    android:gravity="center"
+                    android:text="No phone number"
                     android:textColor="#6B7280"
                     android:textSize="14sp" />
 
@@ -114,6 +130,8 @@
             </LinearLayout>
 
         </androidx.cardview.widget.CardView>
+
+        <!-- Account section -->
 
         <TextView
             android:layout_width="wrap_content"
@@ -137,6 +155,8 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <!-- Change password -->
+
                 <LinearLayout
                     android:id="@+id/itemChangePassword"
                     android:layout_width="match_parent"
@@ -153,7 +173,7 @@
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:contentDescription="Change password"
-
+                        android:src="@drawable/icon_help"
                         app:tint="#2563EB" />
 
                     <TextView
@@ -168,6 +188,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:importantForAccessibility="no"
                         android:text="›"
                         android:textColor="#9CA3AF"
                         android:textSize="28sp" />
@@ -179,6 +200,8 @@
                     android:layout_height="1dp"
                     android:layout_marginStart="60dp"
                     android:background="#E5E7EB" />
+
+                <!-- Notification settings -->
 
                 <LinearLayout
                     android:id="@+id/itemNotifications"
@@ -196,7 +219,7 @@
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:contentDescription="Notifications"
-
+                        android:src="@drawable/icon_notification"
                         app:tint="#2563EB" />
 
                     <TextView
@@ -211,6 +234,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:importantForAccessibility="no"
                         android:text="›"
                         android:textColor="#9CA3AF"
                         android:textSize="28sp" />
@@ -220,6 +244,8 @@
             </LinearLayout>
 
         </androidx.cardview.widget.CardView>
+
+        <!-- Support section -->
 
         <TextView
             android:layout_width="wrap_content"
@@ -243,6 +269,8 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <!-- Help and support -->
+
                 <LinearLayout
                     android:id="@+id/itemHelpSupport"
                     android:layout_width="match_parent"
@@ -259,7 +287,7 @@
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:contentDescription="Help and support"
-
+                        android:src="@drawable/icon_help"
                         app:tint="#2563EB" />
 
                     <TextView
@@ -274,6 +302,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:importantForAccessibility="no"
                         android:text="›"
                         android:textColor="#9CA3AF"
                         android:textSize="28sp" />
@@ -285,6 +314,8 @@
                     android:layout_height="1dp"
                     android:layout_marginStart="60dp"
                     android:background="#E5E7EB" />
+
+                <!-- About -->
 
                 <LinearLayout
                     android:id="@+id/itemAbout"
@@ -301,7 +332,7 @@
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
-                        android:contentDescription="About app"
+                        android:contentDescription="About Smart Route"
                         android:src="@drawable/ic_info"
                         app:tint="#2563EB" />
 
@@ -317,6 +348,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:importantForAccessibility="no"
                         android:text="›"
                         android:textColor="#9CA3AF"
                         android:textSize="28sp" />
@@ -326,6 +358,8 @@
             </LinearLayout>
 
         </androidx.cardview.widget.CardView>
+
+        <!-- Logout -->
 
         <Button
             android:id="@+id/btnLogout"

@@ -1,6 +1,8 @@
 package com.example.smartroute.fragments;
 
 import android.Manifest;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
@@ -21,8 +23,11 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.smartroute.R;
+import com.example.smartroute.data.entity.SavedLocation;
+import com.example.smartroute.data.repository.SavedLocationRepository;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -49,11 +54,17 @@ public class LocationFragment extends Fragment
     private Button btnSaveLocation;
 
     private FusedLocationProviderClient fusedLocationClient;
+    private SavedLocationRepository locationRepository;
 
+    /*
+     * These remain null until the user taps the map
+     * or selects their current location.
+     */
     private Double selectedLatitude;
     private Double selectedLongitude;
 
-    private final ActivityResultLauncher<String[]> permissionLauncher =
+    private final ActivityResultLauncher<String[]>
+            permissionLauncher =
             registerForActivityResult(
                     new ActivityResultContracts.RequestMultiplePermissions(),
                     permissions -> {
@@ -61,14 +72,16 @@ public class LocationFragment extends Fragment
                         boolean fineGranted =
                                 Boolean.TRUE.equals(
                                         permissions.get(
-                                                Manifest.permission.ACCESS_FINE_LOCATION
+                                                Manifest.permission
+                                                        .ACCESS_FINE_LOCATION
                                         )
                                 );
 
                         boolean coarseGranted =
                                 Boolean.TRUE.equals(
                                         permissions.get(
-                                                Manifest.permission.ACCESS_COARSE_LOCATION
+                                                Manifest.permission
+                                                        .ACCESS_COARSE_LOCATION
                                         )
                                 );
 
@@ -80,23 +93,28 @@ public class LocationFragment extends Fragment
                         } else {
 
                             if (txtLocationStatus != null) {
+
                                 txtLocationStatus.setText(
-                                        "Location permission denied. " +
-                                                "You can still select a location by tapping the map."
+                                        "Location permission was denied. " +
+                                                "You can still select a location " +
+                                                "by tapping the map."
                                 );
                             }
 
-                            Toast.makeText(
-                                    requireContext(),
-                                    "Please allow location permission",
-                                    Toast.LENGTH_SHORT
-                            ).show();
+                            if (isAdded()) {
+
+                                Toast.makeText(
+                                        requireContext(),
+                                        "Location permission was not granted",
+                                        Toast.LENGTH_SHORT
+                                ).show();
+                            }
                         }
                     }
             );
 
     public LocationFragment() {
-        // Required empty constructor
+        // Required empty public constructor
     }
 
     @Nullable
@@ -107,62 +125,114 @@ public class LocationFragment extends Fragment
             @Nullable Bundle savedInstanceState
     ) {
 
-        View view = inflater.inflate(
+        return inflater.inflate(
                 R.layout.fragment_location,
                 container,
                 false
         );
+    }
 
-        txtLocationStatus =
-                view.findViewById(R.id.txtLocationStatus);
+    @Override
+    public void onViewCreated(
+            @NonNull View view,
+            @Nullable Bundle savedInstanceState
+    ) {
 
-        txtLatitude =
-                view.findViewById(R.id.txtLatitude);
+        super.onViewCreated(view, savedInstanceState);
 
-        txtLongitude =
-                view.findViewById(R.id.txtLongitude);
-
-        etManualLocation =
-                view.findViewById(R.id.etManualLocation);
-
-        btnGetLocation =
-                view.findViewById(R.id.btnGetLocation);
-
-        btnSaveLocation =
-                view.findViewById(R.id.btnSaveLocation);
+        initializeViews(view);
 
         fusedLocationClient =
                 LocationServices.getFusedLocationProviderClient(
                         requireActivity()
                 );
 
+        locationRepository =
+                new SavedLocationRepository(
+                        requireContext().getApplicationContext()
+                );
+
         SupportMapFragment mapFragment =
-                (SupportMapFragment) getChildFragmentManager()
-                        .findFragmentById(R.id.mapContainer);
+                (SupportMapFragment)
+                        getChildFragmentManager()
+                                .findFragmentById(
+                                        R.id.mapContainer
+                                );
 
         if (mapFragment != null) {
+
             mapFragment.getMapAsync(this);
+
+        } else {
+
+            Toast.makeText(
+                    requireContext(),
+                    "Unable to load the map",
+                    Toast.LENGTH_LONG
+            ).show();
         }
 
-        btnGetLocation.setOnClickListener(v ->
-                checkLocationPermission()
+        btnGetLocation.setOnClickListener(
+                v -> checkLocationPermission()
         );
 
-        btnSaveLocation.setOnClickListener(v ->
-                saveLocation()
+        btnSaveLocation.setOnClickListener(
+                v -> saveLocation()
         );
+    }
 
-        return view;
+    private void initializeViews(
+            @NonNull View view
+    ) {
+
+        txtLocationStatus =
+                view.findViewById(
+                        R.id.txtLocationStatus
+                );
+
+        txtLatitude =
+                view.findViewById(
+                        R.id.txtLatitude
+                );
+
+        txtLongitude =
+                view.findViewById(
+                        R.id.txtLongitude
+                );
+
+        etManualLocation =
+                view.findViewById(
+                        R.id.etManualLocation
+                );
+
+        btnGetLocation =
+                view.findViewById(
+                        R.id.btnGetLocation
+                );
+
+        btnSaveLocation =
+                view.findViewById(
+                        R.id.btnSaveLocation
+                );
     }
 
     @Override
-    public void onMapReady(@NonNull GoogleMap map) {
+    public void onMapReady(
+            @NonNull GoogleMap map
+    ) {
 
         googleMap = map;
 
         LatLng zanzibar =
-                new LatLng(-6.1659, 39.2026);
+                new LatLng(
+                        -6.1659,
+                        39.2026
+                );
 
+        /*
+         * Only move the camera to Zanzibar.
+         * Do not automatically select Zanzibar as the issue location.
+         */
         googleMap.moveCamera(
                 CameraUpdateFactory.newLatLngZoom(
                         zanzibar,
@@ -170,38 +240,12 @@ public class LocationFragment extends Fragment
                 )
         );
 
-        selectedMarker = googleMap.addMarker(
-                new MarkerOptions()
-                        .position(zanzibar)
-                        .title("Selected issue location")
-        );
-
-        updateSelectedLocation(zanzibar);
-
-        googleMap.setOnMapClickListener(latLng -> {
-
-            if (selectedMarker == null) {
-
-                selectedMarker = googleMap.addMarker(
-                        new MarkerOptions()
-                                .position(latLng)
-                                .title("Selected issue location")
-                );
-
-            } else {
-
-                selectedMarker.setPosition(latLng);
-                selectedMarker.setTitle(
+        googleMap.setOnMapClickListener(
+                latLng -> selectMapLocation(
+                        latLng,
                         "Selected issue location"
-                );
-            }
-
-            googleMap.animateCamera(
-                    CameraUpdateFactory.newLatLng(latLng)
-            );
-
-            updateSelectedLocation(latLng);
-        });
+                )
+        );
 
         googleMap.getUiSettings()
                 .setZoomControlsEnabled(true);
@@ -209,34 +253,88 @@ public class LocationFragment extends Fragment
         googleMap.getUiSettings()
                 .setCompassEnabled(true);
 
+        googleMap.getUiSettings()
+                .setMapToolbarEnabled(false);
+
         if (hasLocationPermission()) {
             enableMyLocation();
         }
     }
 
-    private void updateSelectedLocation(LatLng latLng) {
+    /**
+     * Places or moves the marker and records its coordinates.
+     */
+    private void selectMapLocation(
+            @NonNull LatLng latLng,
+            @NonNull String markerTitle
+    ) {
 
-        selectedLatitude = latLng.latitude;
-        selectedLongitude = latLng.longitude;
+        if (googleMap == null) {
+            return;
+        }
 
-        String latitude = String.format(
-                Locale.getDefault(),
-                "%.6f",
-                selectedLatitude
+        if (selectedMarker == null) {
+
+            selectedMarker =
+                    googleMap.addMarker(
+                            new MarkerOptions()
+                                    .position(latLng)
+                                    .title(markerTitle)
+                    );
+
+        } else {
+
+            selectedMarker.setPosition(latLng);
+            selectedMarker.setTitle(markerTitle);
+        }
+
+        googleMap.animateCamera(
+                CameraUpdateFactory.newLatLng(
+                        latLng
+                )
         );
 
-        String longitude = String.format(
-                Locale.getDefault(),
-                "%.6f",
-                selectedLongitude
-        );
+        updateSelectedLocation(latLng);
+    }
 
-        txtLatitude.setText(latitude);
-        txtLongitude.setText(longitude);
+    private void updateSelectedLocation(
+            @NonNull LatLng latLng
+    ) {
 
-        txtLocationStatus.setText(
-                "Location selected from the map."
-        );
+        selectedLatitude =
+                latLng.latitude;
+
+        selectedLongitude =
+                latLng.longitude;
+
+        String latitudeText =
+                String.format(
+                        Locale.getDefault(),
+                        "%.6f",
+                        selectedLatitude
+                );
+
+        String longitudeText =
+                String.format(
+                        Locale.getDefault(),
+                        "%.6f",
+                        selectedLongitude
+                );
+
+        if (txtLatitude != null) {
+            txtLatitude.setText(latitudeText);
+        }
+
+        if (txtLongitude != null) {
+            txtLongitude.setText(longitudeText);
+        }
+
+        if (txtLocationStatus != null) {
+
+            txtLocationStatus.setText(
+                    "Location selected. Add a short description, then save it."
+            );
+        }
     }
 
     private void checkLocationPermission() {
@@ -250,8 +348,11 @@ public class LocationFragment extends Fragment
 
             permissionLauncher.launch(
                     new String[]{
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
+                            Manifest.permission
+                                    .ACCESS_FINE_LOCATION,
+
+                            Manifest.permission
+                                    .ACCESS_COARSE_LOCATION
                     }
             );
         }
@@ -259,16 +360,22 @@ public class LocationFragment extends Fragment
 
     private boolean hasLocationPermission() {
 
+        if (!isAdded()) {
+            return false;
+        }
+
         boolean fineGranted =
                 ContextCompat.checkSelfPermission(
                         requireContext(),
-                        Manifest.permission.ACCESS_FINE_LOCATION
+                        Manifest.permission
+                                .ACCESS_FINE_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED;
 
         boolean coarseGranted =
                 ContextCompat.checkSelfPermission(
                         requireContext(),
-                        Manifest.permission.ACCESS_COARSE_LOCATION
+                        Manifest.permission
+                                .ACCESS_COARSE_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED;
 
         return fineGranted || coarseGranted;
@@ -278,6 +385,7 @@ public class LocationFragment extends Fragment
 
         if (googleMap == null ||
                 !hasLocationPermission()) {
+
             return;
         }
 
@@ -290,11 +398,14 @@ public class LocationFragment extends Fragment
 
         } catch (SecurityException exception) {
 
-            Toast.makeText(
-                    requireContext(),
-                    "Location permission is required",
-                    Toast.LENGTH_SHORT
-            ).show();
+            if (isAdded()) {
+
+                Toast.makeText(
+                        requireContext(),
+                        "Location permission is required",
+                        Toast.LENGTH_SHORT
+                ).show();
+            }
         }
     }
 
@@ -304,65 +415,113 @@ public class LocationFragment extends Fragment
             return;
         }
 
-        txtLocationStatus.setText(
-                "Detecting your current location..."
-        );
+        if (txtLocationStatus != null) {
+
+            txtLocationStatus.setText(
+                    "Detecting your current location..."
+            );
+        }
+
+        btnGetLocation.setEnabled(false);
+        btnGetLocation.setText("Locating...");
 
         try {
 
-            fusedLocationClient.getLastLocation()
-                    .addOnSuccessListener(location -> {
+            fusedLocationClient
+                    .getCurrentLocation(
+                            Priority.PRIORITY_HIGH_ACCURACY,
+                            null
+                    )
+                    .addOnSuccessListener(
+                            location -> {
 
-                        if (!isAdded()) {
-                            return;
-                        }
+                                if (!isAdded()) {
+                                    return;
+                                }
 
-                        if (location != null) {
+                                resetCurrentLocationButton();
 
-                            moveMapToLocation(location);
+                                if (location != null) {
 
-                        } else {
+                                    moveMapToLocation(location);
 
-                            txtLocationStatus.setText(
-                                    "Current location is unavailable. " +
-                                            "Turn on location and try again."
-                            );
+                                } else {
 
-                            Toast.makeText(
-                                    requireContext(),
-                                    "No recent location was found",
-                                    Toast.LENGTH_SHORT
-                            ).show();
-                        }
-                    })
-                    .addOnFailureListener(error -> {
+                                    txtLocationStatus.setText(
+                                            "Current location is unavailable. " +
+                                                    "Turn on location services and try again."
+                                    );
 
-                        if (!isAdded()) {
-                            return;
-                        }
+                                    Toast.makeText(
+                                            requireContext(),
+                                            "Current location was not found",
+                                            Toast.LENGTH_SHORT
+                                    ).show();
+                                }
+                            }
+                    )
+                    .addOnFailureListener(
+                            error -> {
 
-                        txtLocationStatus.setText(
-                                "Failed to retrieve current location."
-                        );
+                                if (!isAdded()) {
+                                    return;
+                                }
 
-                        Toast.makeText(
-                                requireContext(),
-                                "Location request failed",
-                                Toast.LENGTH_SHORT
-                        ).show();
-                    });
+                                resetCurrentLocationButton();
+
+                                txtLocationStatus.setText(
+                                        "Failed to retrieve current location."
+                                );
+
+                                String message =
+                                        error.getMessage();
+
+                                if (message == null ||
+                                        message.trim().isEmpty()) {
+
+                                    message =
+                                            "Location request failed";
+                                }
+
+                                Toast.makeText(
+                                        requireContext(),
+                                        message,
+                                        Toast.LENGTH_SHORT
+                                ).show();
+                            }
+                    );
 
         } catch (SecurityException exception) {
 
-            Toast.makeText(
-                    requireContext(),
-                    "Location permission is required",
-                    Toast.LENGTH_SHORT
-            ).show();
+            resetCurrentLocationButton();
+
+            if (isAdded()) {
+
+                Toast.makeText(
+                        requireContext(),
+                        "Location permission is required",
+                        Toast.LENGTH_SHORT
+                ).show();
+            }
         }
     }
 
-    private void moveMapToLocation(Location location) {
+    private void resetCurrentLocationButton() {
+
+        if (btnGetLocation == null) {
+            return;
+        }
+
+        btnGetLocation.setEnabled(true);
+
+        btnGetLocation.setText(
+                "Use Current Location"
+        );
+    }
+
+    private void moveMapToLocation(
+            @NonNull Location location
+    ) {
 
         if (googleMap == null) {
             return;
@@ -374,19 +533,10 @@ public class LocationFragment extends Fragment
                         location.getLongitude()
                 );
 
-        if (selectedMarker == null) {
-
-            selectedMarker = googleMap.addMarker(
-                    new MarkerOptions()
-                            .position(currentLocation)
-                            .title("Current location")
-            );
-
-        } else {
-
-            selectedMarker.setPosition(currentLocation);
-            selectedMarker.setTitle("Current location");
-        }
+        selectMapLocation(
+                currentLocation,
+                "Current location"
+        );
 
         googleMap.animateCamera(
                 CameraUpdateFactory.newLatLngZoom(
@@ -395,17 +545,18 @@ public class LocationFragment extends Fragment
                 )
         );
 
-        updateSelectedLocation(currentLocation);
-
         txtLocationStatus.setText(
-                "Current location detected successfully."
+                "Current location detected. Add a short description, then save it."
         );
     }
 
     private void saveLocation() {
 
+        etManualLocation.setError(null);
+
         String description =
-                etManualLocation.getText()
+                etManualLocation
+                        .getText()
                         .toString()
                         .trim();
 
@@ -414,8 +565,8 @@ public class LocationFragment extends Fragment
 
             Toast.makeText(
                     requireContext(),
-                    "Select a location on the map",
-                    Toast.LENGTH_SHORT
+                    "Tap the map or use your current location first",
+                    Toast.LENGTH_LONG
             ).show();
 
             return;
@@ -428,18 +579,271 @@ public class LocationFragment extends Fragment
             );
 
             etManualLocation.requestFocus();
+
             return;
         }
 
-        String savedLocation =
-                description +
-                        "\nLatitude: " + selectedLatitude +
-                        "\nLongitude: " + selectedLongitude;
+        int userId =
+                getLoggedInUserId();
 
-        Toast.makeText(
-                requireContext(),
-                "Location saved:\n" + savedLocation,
-                Toast.LENGTH_LONG
-        ).show();
+        if (userId == -1) {
+
+            Toast.makeText(
+                    requireContext(),
+                    "Login session not found. Please sign in again.",
+                    Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
+        SavedLocation savedLocation =
+                new SavedLocation(
+                        userId,
+                        description,
+                        selectedLatitude,
+                        selectedLongitude,
+                        System.currentTimeMillis()
+                );
+
+        insertLocation(savedLocation);
+    }
+
+    private void insertLocation(
+            @NonNull SavedLocation savedLocation
+    ) {
+
+        setLoading(true);
+
+        locationRepository.insertLocation(
+                savedLocation,
+                new SavedLocationRepository.InsertCallback() {
+
+                    @Override
+                    public void onSuccess(
+                            long locationId
+                    ) {
+
+                        if (!isAdded()) {
+                            return;
+                        }
+
+                        requireActivity()
+                                .runOnUiThread(
+                                        () -> {
+
+                                            if (!isAdded()) {
+                                                return;
+                                            }
+
+                                            setLoading(false);
+
+                                            saveSelectedLocationToSession(
+                                                    locationId,
+                                                    savedLocation
+                                            );
+
+                                            /*
+                                             * Send the selected map location
+                                             * back to ReportFragment.
+                                             */
+                                            returnLocationToReport(
+                                                    savedLocation
+                                            );
+
+                                            Toast.makeText(
+                                                    requireContext(),
+                                                    "Location selected successfully",
+                                                    Toast.LENGTH_SHORT
+                                            ).show();
+
+                                            /*
+                                             * Return to ReportFragment.
+                                             */
+                                            getParentFragmentManager()
+                                                    .popBackStack();
+                                        }
+                                );
+                    }
+
+                    @Override
+                    public void onError(
+                            String message
+                    ) {
+
+                        if (!isAdded()) {
+                            return;
+                        }
+
+                        requireActivity()
+                                .runOnUiThread(
+                                        () -> {
+
+                                            if (!isAdded()) {
+                                                return;
+                                            }
+
+                                            setLoading(false);
+
+                                            String errorMessage =
+                                                    message;
+
+                                            if (errorMessage == null ||
+                                                    errorMessage
+                                                            .trim()
+                                                            .isEmpty()) {
+
+                                                errorMessage =
+                                                        "Unable to save the location";
+                                            }
+
+                                            Toast.makeText(
+                                                    requireContext(),
+                                                    errorMessage,
+                                                    Toast.LENGTH_LONG
+                                            ).show();
+                                        }
+                                );
+                    }
+                }
+        );
+    }
+
+    /**
+     * Sends the selected location to ReportFragment.
+     */
+    private void returnLocationToReport(
+            @NonNull SavedLocation location
+    ) {
+
+        Bundle result =
+                new Bundle();
+
+        result.putString(
+                ReportFragment.KEY_SELECTED_ADDRESS,
+                location.getDescription()
+        );
+
+        result.putDouble(
+                ReportFragment.KEY_SELECTED_LATITUDE,
+                location.getLatitude()
+        );
+
+        result.putDouble(
+                ReportFragment.KEY_SELECTED_LONGITUDE,
+                location.getLongitude()
+        );
+
+        getParentFragmentManager()
+                .setFragmentResult(
+                        ReportFragment.LOCATION_REQUEST_KEY,
+                        result
+                );
+    }
+
+    private int getLoggedInUserId() {
+
+        SharedPreferences preferences =
+                requireContext()
+                        .getSharedPreferences(
+                                "smart_route_session",
+                                Context.MODE_PRIVATE
+                        );
+
+        return preferences.getInt(
+                "user_id",
+                -1
+        );
+    }
+
+    private void saveSelectedLocationToSession(
+            long locationId,
+            @NonNull SavedLocation location
+    ) {
+
+        requireContext()
+                .getSharedPreferences(
+                        "smart_route_session",
+                        Context.MODE_PRIVATE
+                )
+                .edit()
+                .putLong(
+                        "selected_location_id",
+                        locationId
+                )
+                .putString(
+                        "selected_location_description",
+                        location.getDescription()
+                )
+                .putString(
+                        "selected_latitude",
+                        String.valueOf(
+                                location.getLatitude()
+                        )
+                )
+                .putString(
+                        "selected_longitude",
+                        String.valueOf(
+                                location.getLongitude()
+                        )
+                )
+                .apply();
+    }
+
+    private void setLoading(
+            boolean loading
+    ) {
+
+        if (btnSaveLocation != null) {
+
+            btnSaveLocation.setEnabled(
+                    !loading
+            );
+
+            if (loading) {
+
+                btnSaveLocation.setText(
+                        "Saving location..."
+                );
+
+            } else {
+
+                btnSaveLocation.setText(
+                        "Save Location"
+                );
+            }
+        }
+
+        if (btnGetLocation != null) {
+
+            btnGetLocation.setEnabled(
+                    !loading
+            );
+        }
+
+        if (etManualLocation != null) {
+
+            etManualLocation.setEnabled(
+                    !loading
+            );
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+
+        super.onDestroyView();
+
+        googleMap = null;
+        selectedMarker = null;
+
+        txtLocationStatus = null;
+        txtLatitude = null;
+        txtLongitude = null;
+
+        etManualLocation = null;
+
+        btnGetLocation = null;
+        btnSaveLocation = null;
     }
 }

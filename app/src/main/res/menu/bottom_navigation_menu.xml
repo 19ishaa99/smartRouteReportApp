@@ -3,7 +3,7 @@
 
     <item
         android:id="@+id/navHome"
-        android:icon="@drawable/icon_home"
+        android:icon="@drawable/ic_home"
         android:title="Home" />
 
     <item
@@ -12,17 +12,17 @@
         android:title="Report" />
     <item
         android:id="@+id/navLocation"
-        android:icon="@drawable/icon_location"
+        android:icon="@drawable/ic_location"
         android:title="Location" />
 
     <item
         android:id="@+id/navMyReports"
-android:icon="@drawable/icon_reports"
+android:icon="@drawable/ic_report"
         android:title="My Reports" />
 
     <item
         android:id="@+id/navProfile"
-        android:icon="@drawable/icon_profile"
+        android:icon="@drawable/ic_profile"
         android:title="Profile" />
 
 

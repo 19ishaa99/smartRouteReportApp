@@ -53,7 +53,8 @@ dependencies {
     implementation("com.google.android.gms:play-services-maps:20.0.0")
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("androidx.cardview:cardview:1.0.0")
-
+    implementation ("androidx.room:room-runtime:2.8.4")
+    annotationProcessor ("androidx.room:room-compiler:2.8.4")
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
